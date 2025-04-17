@@ -71,27 +71,56 @@ def find_road(frame):
     
     return center_percent
 
-#example usage
+def visualize_road_mask(frame, mask):
+    """Overlay the road mask on the original frame"""
+    # Create a blue overlay for the road
+    overlay = frame.copy()
+    overlay[mask == 1] = [255, 0, 0]  # Blue color for road
+
+    # Blend the overlay with original frame
+    alpha = 0.4
+    output = cv2.addWeighted(overlay, alpha, frame, 1 - alpha, 0)
+
+    # Draw center line if available
+    center_percent = calculate_road_center(mask)
+    if center_percent is not None:
+        height, width = frame.shape[:2]
+        center_x = int((center_percent / 100) * width)
+        cv2.line(output, (center_x, height), (center_x, height - 50), (0, 255, 0), 2)
+        cv2.putText(output, f"Center: {center_percent}%", (10, 30), 
+                    cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+
+    return output
+
 if __name__ == "__main__":
     # Open webcam
-    cap = cv2.VideoCapture(0)
+    cam = cv2.VideoCapture(0)
     
-    # Warm up the camera
+    # warm up camera. Just taking the picture doesn't give time for autofocus/brightness
     print("Warming up camera...")
     for _ in range(30):
-        ret = cap.read()[0]
+        ret = cam.read()[0]
         if not ret:
             break
     
     # Capture the actual frame
     print("Capturing frame...")
-    ret, frame = cap.read()
+    ret, frame = cam.read()
     if ret:
         # Process frame
-        center_percent = find_road(frame)
+        inputs, original_image, original_size = preprocess_image(frame)
         
-        if center_percent is not None:
-            print(f"Road center percentage: {center_percent}%")
+        with torch.no_grad():
+            outputs = model(**inputs)
+        
+        drivable_mask = get_drivable_mask(outputs, original_size)
+        
+        # Create visualization
+        output_frame = visualize_road_mask(frame, drivable_mask)
+        
+        # Save the visualization
+        cv2.imwrite('road_detection.png', output_frame)
+        print("Saved visualization to road_detection.png")
     
     # Cleanup
-    cap.release()
+    cam.release()
