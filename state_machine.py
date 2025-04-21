@@ -1,3 +1,5 @@
+# DEPRECATED - NOT USED FOR FINAL IMPLEMENTATION
+
 from transitions import Machine
 import serial
 import time
@@ -30,7 +32,7 @@ transitions = [
     {'trigger': 'resume_straight', 'source': ['slight_left', 'slight_right', 'hard_left', 'hard_right'], 'dest': 'normal_drive'},
 ]
 
-# === FSM Class ===
+# === Class Definition ===
 class GoKart:
     def __init__(self):
         self.machine = Machine(model=self, states=states, transitions=transitions, initial='normal_drive')
@@ -47,7 +49,7 @@ class GoKart:
             'hard_right': (80, 20)
         }
         return command_map[self.state]
-
+# OLD COMMAND IMPLEMENTATION
     def send_to_teensy(self):
         steer, speed = self.compute_command()
         packet = f"{steer},{speed}\n"
